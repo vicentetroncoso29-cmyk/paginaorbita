@@ -330,9 +330,10 @@
    PRODUCTS de abajo directamente y vuelve a subir el archivo.
    ========================================================= */
 
-// Tu webhook de Discord. Solo tú deberías conocer esta URL:
-// cualquiera que la tenga puede publicar mensajes en tu canal.
-const WEBHOOK_URL = "https://discord.com/api/webhooks/1535393832017854569/GhN1GuPRTgP9x3IUQqcMn5bMclmwrf-pBSpOj4oagIGIApbgapx5RQ18BDi7CQoKmCf7";
+// URL de tu Worker de Cloudflare (público, seguro de mostrar: no contiene
+// el webhook real). Se ve algo así: https://pedidos-orbita.tu-usuario.workers.dev
+// Instrucciones completas de cómo crearlo: ver el archivo worker-pedidos.js.
+const ORDER_ENDPOINT = "PON_AQUI_LA_URL_DE_TU_WORKER";
 
 // Catálogo. Copia un bloque { } y edítalo para agregar un producto nuevo.
 // image: pega la URL de una foto (puede ser de tu celular subida a algún
@@ -614,7 +615,9 @@ document.getElementById('sendOrder').addEventListener('click', async ()=>{
   const msg = document.getElementById('cartMsg');
   const ids = Object.keys(cart).filter(id=>cart[id]>0);
   if(ids.length===0){ msg.className='msg err'; msg.textContent='Agrega al menos un producto.'; return; }
-  if(!WEBHOOK_URL){ msg.className='msg err'; msg.textContent='Falta configurar el webhook en el código.'; return; }
+  if(!ORDER_ENDPOINT || ORDER_ENDPOINT.includes('PON_AQUI')){
+    msg.className='msg err'; msg.textContent='Falta configurar ORDER_ENDPOINT en el código.'; return;
+  }
 
   let total = 0;
   const fields = ids.map(id=>{
@@ -622,28 +625,21 @@ document.getElementById('sendOrder').addEventListener('click', async ()=>{
     const qty = cart[id];
     const sub = (p?.price||0)*qty;
     total += sub;
-    return { name: p ? p.name : id, value: `x${qty} — ${CLP.format(sub)}`, inline:false };
+    return { name: p ? p.name : id, value: `x${qty} — ${CLP.format(sub)}` };
   });
-
-  const payload = {
-    content: '📦 **Nuevo pedido pendiente**',
-    embeds: [{
-      title: 'Pedido desde ÓRBITA',
-      color: 16750935,
-      fields: fields,
-      footer: { text: `Total: ${CLP.format(total)}` },
-      timestamp: new Date().toISOString()
-    }]
-  };
 
   const btn = document.getElementById('sendOrder');
   btn.disabled = true; btn.textContent = 'Enviando…';
   try{
-    await fetch(WEBHOOK_URL, {
+    const res = await fetch(ORDER_ENDPOINT, {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(payload)
+      body: JSON.stringify({ fields, total: CLP.format(total) })
     });
+    if(!res.ok){
+      const data = await res.json().catch(()=>({}));
+      throw new Error(data.error || 'No se pudo enviar');
+    }
     cart = {};
     updateCartCount();
     renderCart();
@@ -651,7 +647,7 @@ document.getElementById('sendOrder').addEventListener('click', async ()=>{
     showToast('Pedido enviado ✨');
     setTimeout(()=>closeOverlay('overlayCart'), 900);
   }catch(err){
-    msg.className='msg err'; msg.textContent='No se pudo enviar. Revisa tu conexión.';
+    msg.className='msg err'; msg.textContent = err.message || 'No se pudo enviar. Revisa tu conexión.';
   }finally{
     btn.disabled = false; btn.textContent = 'Enviar pedido';
   }
