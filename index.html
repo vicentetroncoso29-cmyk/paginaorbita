@@ -321,6 +321,331 @@
 
 <footer>Catálogo ÓRBITA · sin anuncios, sin rastreo</footer>
 
+<script src="main.js" defer></script>
+</body>
+</html><!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ÓRBITA · Catálogo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#05050b;
+    --deep:#0d0e24;
+    --panel:rgba(16,17,40,0.55);
+    --line:rgba(237,235,255,0.12);
+    --star:#edebff;
+    --star-dim:rgba(237,235,255,0.6);
+    --amber:#ffb258;
+    --ember:#ff6a3d;
+    --cyan:#4de2ff;
+    --radius:18px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--void);
+    color:var(--star);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    overflow-x:hidden;
+    position:relative;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important;}
+  }
+
+  /* ---------- fondo cósmico ---------- */
+  #starfield{
+    position:fixed; inset:0; width:100%; height:100%;
+    z-index:0; background:radial-gradient(ellipse at 50% -10%, #12123a 0%, var(--deep) 45%, var(--void) 100%);
+  }
+  .bg-photos{ position:fixed; inset:0; z-index:1; overflow:hidden; pointer-events:none; }
+  .bg-photos img{
+    position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+    opacity:0; transition:opacity 3s ease;
+    filter:brightness(0.5) saturate(1.15) contrast(1.05);
+  }
+  .bg-photos img.show{ opacity:1; }
+  .bg-shade{
+    position:fixed; inset:0; z-index:2; pointer-events:none;
+    background:linear-gradient(180deg, rgba(5,5,11,0.35) 0%, rgba(5,5,11,0.55) 55%, rgba(5,5,11,0.85) 100%);
+  }
+  .nebula{
+    position:fixed; inset:0; z-index:2; pointer-events:none;
+    background:
+      radial-gradient(60% 40% at 15% 20%, rgba(255,106,61,0.10), transparent 60%),
+      radial-gradient(50% 35% at 85% 75%, rgba(77,226,255,0.08), transparent 60%),
+      radial-gradient(40% 30% at 70% 10%, rgba(255,178,88,0.08), transparent 60%);
+  }
+  .blackhole{
+    position:fixed; top:8%; left:50%; transform:translateX(-50%);
+    width:min(70vw,720px); height:min(70vw,720px); z-index:3; pointer-events:none;
+    opacity:0.85;
+  }
+  .bh-core{
+    position:absolute; inset:38%;
+    border-radius:50%;
+    background:radial-gradient(circle at 50% 50%, #000 0%, #000 60%, rgba(0,0,0,0) 100%);
+    box-shadow:0 0 90px 40px rgba(0,0,0,0.85);
+    z-index:3;
+  }
+  .bh-disk{
+    position:absolute; inset:0;
+    border-radius:50%;
+    background:conic-gradient(from 0deg,
+      rgba(255,178,88,0.05) 0deg,
+      rgba(255,106,61,0.55) 60deg,
+      rgba(255,220,160,0.9) 120deg,
+      rgba(255,106,61,0.55) 180deg,
+      rgba(255,178,88,0.05) 240deg,
+      rgba(255,106,61,0.35) 300deg,
+      rgba(255,178,88,0.05) 360deg);
+    filter:blur(6px);
+    animation:spin 22s linear infinite;
+    mask:radial-gradient(circle, transparent 34%, black 40%, black 62%, transparent 66%);
+    -webkit-mask:radial-gradient(circle, transparent 34%, black 40%, black 62%, transparent 66%);
+  }
+  .bh-lens{
+    position:absolute; inset:-6%;
+    border-radius:50%;
+    border:1px solid rgba(255,220,180,0.25);
+    box-shadow:0 0 60px 10px rgba(255,178,88,0.08) inset;
+    animation:spin 40s linear infinite reverse;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  /* ---------- layout ---------- */
+  .wrap{ position:relative; z-index:10; max-width:1180px; margin:0 auto; padding:0 24px 120px; }
+
+  header.top{
+    display:flex; justify-content:center; align-items:center;
+    padding:28px 0 10px;
+  }
+  .brand{ display:flex; align-items:center; gap:10px; font-family:'Space Grotesk',sans-serif; font-weight:600; letter-spacing:0.02em; font-size:1.05rem; }
+  .brand-dot{ width:9px; height:9px; border-radius:50%; background:var(--amber); box-shadow:0 0 12px 3px var(--amber); }
+
+  .hero{ text-align:center; padding:60px 0 40px; }
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace; font-size:0.72rem; letter-spacing:0.18em;
+    color:var(--amber); text-transform:uppercase; margin-bottom:14px;
+  }
+  h1{
+    font-family:'Space Grotesk',sans-serif; font-weight:700;
+    font-size:clamp(2.2rem, 6vw, 4rem); margin:0 0 14px; line-height:1.05;
+    background:linear-gradient(135deg, var(--star) 20%, var(--amber) 60%, var(--ember) 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .hero p{ color:var(--star-dim); font-size:1.02rem; max-width:520px; margin:0 auto; }
+
+  /* ---------- barra de búsqueda ---------- */
+  .search-shell{
+    max-width:560px; margin:36px auto 0; position:relative;
+  }
+  .search-bar{
+    display:flex; align-items:center; gap:10px;
+    background:rgba(255,255,255,0.88);
+    backdrop-filter:blur(22px) saturate(180%);
+    -webkit-backdrop-filter:blur(22px) saturate(180%);
+    border:1px solid rgba(255,255,255,0.5);
+    border-radius:999px;
+    padding:15px 22px;
+    box-shadow:0 8px 40px rgba(0,0,0,0.45);
+    transition:transform .2s ease, box-shadow .2s ease, background .4s ease;
+  }
+  .search-shell:focus-within .search-bar{
+    transform:scale(1.015);
+    background:rgba(255,255,255,0.96);
+    box-shadow:0 10px 50px rgba(255,178,88,0.3);
+  }
+  .search-bar svg{ flex:none; color:#1a1b3a; opacity:0.75; }
+  .search-bar input{
+    border:none; outline:none; background:transparent;
+    width:100%; font-family:'Inter',sans-serif; font-size:0.98rem;
+    color:#12132c;
+  }
+  .search-bar input::placeholder{ color:#12132c; opacity:0.48; }
+  .search-hint{
+    text-align:center; font-size:0.75rem; color:var(--star-dim); margin-top:10px;
+    font-family:'JetBrains Mono',monospace; letter-spacing:0.02em;
+  }
+
+  /* ---------- grid de productos ---------- */
+  .grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr));
+    gap:20px; margin-top:44px;
+  }
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    backdrop-filter:blur(14px); overflow:hidden; display:flex; flex-direction:column;
+    transition:transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+  }
+  .card:hover{ transform:translateY(-4px); border-color:rgba(255,178,88,0.4); box-shadow:0 12px 40px rgba(0,0,0,0.4); }
+  .card-img{
+    width:100%; aspect-ratio:4/3; object-fit:cover; display:block;
+    background:linear-gradient(135deg,#14152f,#0a0b1c);
+  }
+  .card-body{ padding:16px 16px 18px; display:flex; flex-direction:column; gap:8px; flex:1; }
+  .card-name{ font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:1.02rem; }
+  .card-desc{ color:var(--star-dim); font-size:0.83rem; line-height:1.4; flex:1; }
+  .card-foot{ display:flex; align-items:center; justify-content:space-between; margin-top:6px; }
+  .card-price{ font-family:'JetBrains Mono',monospace; color:var(--amber); font-size:1rem; }
+  .card-stock{ font-family:'JetBrains Mono',monospace; font-size:0.7rem; color:var(--star-dim); }
+  .add-cart{
+    background:linear-gradient(135deg,var(--amber),var(--ember)); border:none; color:#1a0e05;
+    font-weight:600; padding:9px 14px; border-radius:10px; cursor:pointer; font-size:0.82rem;
+    transition:filter .2s ease, transform .15s ease;
+  }
+  .add-cart:hover{ filter:brightness(1.08); transform:translateY(-1px); }
+  .add-cart:disabled{ opacity:0.35; cursor:not-allowed; filter:none; }
+  .empty{
+    text-align:center; padding:70px 20px; color:var(--star-dim);
+    border:1px dashed var(--line); border-radius:var(--radius); margin-top:40px;
+  }
+  .search-fallback-note{
+    grid-column:1/-1;
+    font-family:'JetBrains Mono',monospace; font-size:0.78rem; color:var(--amber);
+    text-align:center; margin-bottom:6px;
+  }
+
+  /* ---------- carrito flotante ---------- */
+  .cart-fab{
+    position:fixed; bottom:26px; right:26px; z-index:20;
+    background:linear-gradient(135deg,var(--amber),var(--ember)); color:#1a0e05;
+    border:none; border-radius:999px; padding:14px 22px; font-weight:600;
+    display:flex; align-items:center; gap:10px; cursor:pointer;
+    box-shadow:0 10px 30px rgba(255,106,61,0.35);
+    font-family:'Inter',sans-serif; font-size:0.9rem;
+    transition:transform .2s ease;
+  }
+  .cart-fab:hover{ transform:translateY(-2px); }
+  .cart-count{
+    background:#1a0e05; color:var(--amber); border-radius:999px; min-width:22px; height:22px;
+    display:flex; align-items:center; justify-content:center; font-size:0.72rem; padding:0 6px;
+  }
+
+  /* ---------- overlays / modales ---------- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(3,3,10,0.72); backdrop-filter:blur(4px);
+    display:none; align-items:center; justify-content:center; z-index:50; padding:20px;
+  }
+  .overlay.open{ display:flex; }
+  .sheet{
+    background:#0c0d24; border:1px solid var(--line); border-radius:20px;
+    width:100%; max-width:460px; max-height:88vh; overflow-y:auto;
+    padding:26px; position:relative;
+  }
+  .sheet.wide{ max-width:420px; }
+  .sheet h2{ font-family:'Space Grotesk',sans-serif; margin:0 0 6px; font-size:1.3rem; }
+  .sheet .sub{ color:var(--star-dim); font-size:0.82rem; margin-bottom:18px; }
+  .close-x{
+    position:absolute; top:18px; right:18px; background:none; border:none; color:var(--star-dim);
+    font-size:1.2rem; cursor:pointer; line-height:1;
+  }
+  .close-x:hover{ color:var(--star); }
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:0.75rem; color:var(--star-dim); margin-bottom:6px; font-family:'JetBrains Mono',monospace; }
+  .field input, .field textarea{
+    width:100%; background:rgba(255,255,255,0.05); border:1px solid var(--line); color:var(--star);
+    border-radius:10px; padding:10px 12px; font-family:'Inter',sans-serif; font-size:0.9rem; outline:none;
+  }
+  .field input:focus, .field textarea:focus{ border-color:var(--amber); }
+  .field textarea{ resize:vertical; min-height:70px; }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .primary-btn{
+    width:100%; background:linear-gradient(135deg,var(--amber),var(--ember)); border:none; color:#1a0e05;
+    font-weight:600; padding:12px; border-radius:12px; cursor:pointer; font-size:0.92rem; margin-top:6px;
+    transition:filter .2s ease;
+  }
+  .primary-btn:hover{ filter:brightness(1.08); }
+  .primary-btn:disabled{ opacity:0.4; cursor:not-allowed; }
+  .ghost-btn{
+    width:100%; background:transparent; border:1px solid var(--line); color:var(--star-dim);
+    padding:11px; border-radius:12px; cursor:pointer; font-size:0.85rem; margin-top:8px;
+  }
+  .ghost-btn:hover{ border-color:var(--star); color:var(--star); }
+
+  .cart-item{ display:flex; gap:12px; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); }
+  .cart-item img{ width:52px; height:52px; border-radius:8px; object-fit:cover; background:#141531; }
+  .cart-item .ci-body{ flex:1; min-width:0; }
+  .cart-item .ci-name{ font-size:0.88rem; font-weight:500; }
+  .cart-item .ci-price{ font-family:'JetBrains Mono',monospace; font-size:0.78rem; color:var(--amber); }
+  .qty{ display:flex; align-items:center; gap:8px; }
+  .qty button{ background:rgba(255,255,255,0.06); border:1px solid var(--line); color:var(--star); width:24px; height:24px; border-radius:6px; cursor:pointer; }
+  .cart-total{ display:flex; justify-content:space-between; align-items:center; margin:16px 0 4px; font-family:'JetBrains Mono',monospace; }
+  .cart-total b{ color:var(--amber); font-size:1.1rem; }
+
+  .toast{
+    position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:#101227; border:1px solid var(--line); color:var(--star); padding:12px 20px;
+    border-radius:12px; font-size:0.85rem; z-index:80; opacity:0; pointer-events:none;
+    transition:opacity .3s ease, transform .3s ease;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  .msg{ font-size:0.78rem; margin-top:8px; min-height:16px; }
+  .msg.err{ color:var(--ember); }
+  .msg.ok{ color:var(--cyan); }
+
+  footer{ text-align:center; color:var(--star-dim); font-size:0.75rem; padding:40px 0 10px; opacity:0.6; }
+</style>
+</head>
+<body>
+
+<canvas id="starfield"></canvas>
+<div class="bg-photos" id="bgPhotos"></div>
+<div class="bg-shade"></div>
+<div class="nebula"></div>
+<div class="blackhole"><div class="bh-lens"></div><div class="bh-disk"></div><div class="bh-core"></div></div>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><span class="brand-dot"></span> ÓRBITA</div>
+  </header>
+
+  <section class="hero">
+    <div class="eyebrow">Catálogo en vivo</div>
+    <h1>Explora lo que<br>tenemos en órbita</h1>
+    <p>Busca un producto, agrégalo a tu pedido y lo enviamos directo a la tienda. Sin vueltas.</p>
+
+    <div class="search-shell">
+      <div class="search-bar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="searchInput" type="text" placeholder="Busca un producto…" autocomplete="off">
+      </div>
+      <div class="search-hint">toma un tinte del cosmos que tiene detrás</div>
+    </div>
+  </section>
+
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="emptyState" style="display:none;">Aún no hay productos publicados.</div>
+</div>
+
+<button class="cart-fab" id="cartFab">
+  🛒 Pedido <span class="cart-count" id="cartCount">0</span>
+</button>
+
+<!-- Modal: carrito -->
+<div class="overlay" id="overlayCart">
+  <div class="sheet">
+    <button class="close-x" data-close>✕</button>
+    <h2>Tu pedido</h2>
+    <div class="sub">Revisa las cantidades antes de enviarlo a la tienda.</div>
+    <div id="cartList"></div>
+    <div class="cart-total"><span>Total</span><b id="cartTotal">$0</b></div>
+    <button class="primary-btn" id="sendOrder">Enviar pedido</button>
+    <button class="ghost-btn" data-close>Seguir viendo productos</button>
+    <div class="msg" id="cartMsg"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<footer>Catálogo ÓRBITA · sin anuncios, sin rastreo</footer>
+
 <script>
 /* =========================================================
    ÓRBITA — catálogo con fondo cósmico + pedidos por Discord
