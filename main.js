@@ -6,16 +6,14 @@
    PRODUCTS de abajo directamente y vuelve a subir el archivo.
    ========================================================= */
 
-// Tu webhook de Discord. Queda visible en el código porque la página vive
-// en GitHub Pages (sitio 100% estático, sin forma de guardar secretos).
-// Riesgo aceptado: si alguien lo usa para mandar spam a tu canal, entras a
-// Discord → Editar canal → Integraciones → Webhooks → borras este y creas
-// uno nuevo, pegas la URL nueva aquí y vuelves a subir el archivo.
-const WEBHOOK_URL = "https://discord.com/api/webhooks/1536106144475390138/ZQNL6qdLXg6d84EDRqyemaChHF8c3BMF4LJ8bFWlGJqPGWKsp8anpxvyBP8jc7V_KTnY";
+// URL de tu Worker de Cloudflare (público, seguro de mostrar: NO contiene
+// el webhook real, ese vive como secreto dentro del Worker). Se ve algo
+// así: https://pedidos-orbita.tu-usuario.workers.dev
+// Instrucciones para crearlo: archivo worker-pedidos.js.
+const ORDER_ENDPOINT = "https://paginaorbita2.vicentetroncoso29.workers.dev";
 
-// Enfriamiento simple entre pedidos, solo para evitar dobles-clics o
-// spam casual desde el mismo navegador (no protege contra alguien que
-// copie el webhook y lo use por fuera de la página).
+// Enfriamiento simple entre pedidos, solo para evitar dobles-clics
+// desde el mismo navegador (el Worker también limita por su cuenta).
 const ORDER_COOLDOWN_MS = 4000;
 let lastOrderAt = 0;
 
@@ -312,28 +310,24 @@ document.getElementById('sendOrder').addEventListener('click', async ()=>{
     const qty = cart[id];
     const sub = (p?.price||0)*qty;
     total += sub;
-    return { name: p ? p.name : id, value: `x${qty} — ${CLP.format(sub)}`, inline:false };
+    return { name: p ? p.name : id, value: `x${qty} — ${CLP.format(sub)}` };
   });
-
-  const payload = {
-    content: '📦 **Nuevo pedido pendiente**',
-    embeds: [{
-      title: 'Pedido desde ÓRBITA',
-      color: 16750935,
-      fields: fields,
-      footer: { text: `Total: ${CLP.format(total)}` },
-      timestamp: new Date().toISOString()
-    }]
-  };
 
   const btn = document.getElementById('sendOrder');
   btn.disabled = true; btn.textContent = 'Enviando…';
   try{
-    await fetch(WEBHOOK_URL, {
+    if(!ORDER_ENDPOINT || ORDER_ENDPOINT.includes('PON_AQUI')){
+      throw new Error('Falta configurar ORDER_ENDPOINT con la URL de tu Worker.');
+    }
+    const res = await fetch(ORDER_ENDPOINT, {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(payload)
+      body: JSON.stringify({ fields, total: CLP.format(total) })
     });
+    if(!res.ok){
+      const data = await res.json().catch(()=>({}));
+      throw new Error(data.error || 'No se pudo enviar');
+    }
     lastOrderAt = Date.now();
     cart = {};
     updateCartCount();
@@ -342,7 +336,7 @@ document.getElementById('sendOrder').addEventListener('click', async ()=>{
     showToast('Pedido enviado ✨');
     setTimeout(()=>closeOverlay('overlayCart'), 900);
   }catch(err){
-    msg.className='msg err'; msg.textContent='No se pudo enviar. Revisa tu conexión.';
+    msg.className='msg err'; msg.textContent = err.message || 'No se pudo enviar. Revisa tu conexión.';
   }finally{
     btn.disabled = false; btn.textContent = 'Enviar pedido';
   }
