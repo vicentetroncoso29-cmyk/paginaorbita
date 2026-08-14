@@ -6,10 +6,18 @@
    PRODUCTS de abajo directamente y vuelve a subir el archivo.
    ========================================================= */
 
-// URL de tu Worker de Cloudflare (público, seguro de mostrar: no contiene
-// el webhook real). Se ve algo así: https://pedidos-orbita.tu-usuario.workers.dev
-// Instrucciones completas de cómo crearlo: ver el archivo worker-pedidos.js.
-const ORDER_ENDPOINT = "PON_AQUI_LA_URL_DE_TU_WORKER";
+// Tu webhook de Discord. Queda visible en el código porque la página vive
+// en GitHub Pages (sitio 100% estático, sin forma de guardar secretos).
+// Riesgo aceptado: si alguien lo usa para mandar spam a tu canal, entras a
+// Discord → Editar canal → Integraciones → Webhooks → borras este y creas
+// uno nuevo, pegas la URL nueva aquí y vuelves a subir el archivo.
+const WEBHOOK_URL = "https://discord.com/api/webhooks/1536106144475390138/ZQNL6qdLXg6d84EDRqyemaChHF8c3BMF4LJ8bFWlGJqPGWKsp8anpxvyBP8jc7V_KTnY";
+
+// Enfriamiento simple entre pedidos, solo para evitar dobles-clics o
+// spam casual desde el mismo navegador (no protege contra alguien que
+// copie el webhook y lo use por fuera de la página).
+const ORDER_COOLDOWN_MS = 4000;
+let lastOrderAt = 0;
 
 // Catálogo. Copia un bloque { } y edítalo para agregar un producto nuevo.
 // image: pega la URL de una foto (puede ser de tu celular subida a algún
@@ -291,8 +299,11 @@ document.getElementById('sendOrder').addEventListener('click', async ()=>{
   const msg = document.getElementById('cartMsg');
   const ids = Object.keys(cart).filter(id=>cart[id]>0);
   if(ids.length===0){ msg.className='msg err'; msg.textContent='Agrega al menos un producto.'; return; }
-  if(!ORDER_ENDPOINT || ORDER_ENDPOINT.includes('PON_AQUI')){
-    msg.className='msg err'; msg.textContent='Falta configurar ORDER_ENDPOINT en el código.'; return;
+  const sinceLast = Date.now() - lastOrderAt;
+  if(sinceLast < ORDER_COOLDOWN_MS){
+    msg.className='msg err';
+    msg.textContent = `Espera ${Math.ceil((ORDER_COOLDOWN_MS - sinceLast)/1000)}s antes de enviar otro pedido.`;
+    return;
   }
 
   let total = 0;
@@ -301,21 +312,29 @@ document.getElementById('sendOrder').addEventListener('click', async ()=>{
     const qty = cart[id];
     const sub = (p?.price||0)*qty;
     total += sub;
-    return { name: p ? p.name : id, value: `x${qty} — ${CLP.format(sub)}` };
+    return { name: p ? p.name : id, value: `x${qty} — ${CLP.format(sub)}`, inline:false };
   });
+
+  const payload = {
+    content: '📦 **Nuevo pedido pendiente**',
+    embeds: [{
+      title: 'Pedido desde ÓRBITA',
+      color: 16750935,
+      fields: fields,
+      footer: { text: `Total: ${CLP.format(total)}` },
+      timestamp: new Date().toISOString()
+    }]
+  };
 
   const btn = document.getElementById('sendOrder');
   btn.disabled = true; btn.textContent = 'Enviando…';
   try{
-    const res = await fetch(ORDER_ENDPOINT, {
+    await fetch(WEBHOOK_URL, {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ fields, total: CLP.format(total) })
+      body: JSON.stringify(payload)
     });
-    if(!res.ok){
-      const data = await res.json().catch(()=>({}));
-      throw new Error(data.error || 'No se pudo enviar');
-    }
+    lastOrderAt = Date.now();
     cart = {};
     updateCartCount();
     renderCart();
@@ -323,7 +342,7 @@ document.getElementById('sendOrder').addEventListener('click', async ()=>{
     showToast('Pedido enviado ✨');
     setTimeout(()=>closeOverlay('overlayCart'), 900);
   }catch(err){
-    msg.className='msg err'; msg.textContent = err.message || 'No se pudo enviar. Revisa tu conexión.';
+    msg.className='msg err'; msg.textContent='No se pudo enviar. Revisa tu conexión.';
   }finally{
     btn.disabled = false; btn.textContent = 'Enviar pedido';
   }
